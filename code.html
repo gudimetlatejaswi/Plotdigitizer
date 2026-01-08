@@ -1,0 +1,583 @@
+ %%html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot Digitizer Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            min-height: calc(100vh - 140px);
+        }
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 2px solid #dee2e6;
+            overflow-y: auto;
+        }
+        .canvas-area {
+            padding: 20px;
+            overflow: auto;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid #e9ecef;
+        }
+        .section h3 {
+            color: #495057;
+            margin-bottom: 12px;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-info { background: #3b82f6; color: white; }
+        .btn-purple { background: #8b5cf6; color: white; }
+
+        input[type="file"] { display: none; }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .input-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .instruction-box {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 10px 0;
+        }
+        .curve-item {
+            background: #f3f4f6;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .curve-item:hover {
+            background: #e5e7eb;
+        }
+        .curve-item.active {
+            border-color: #667eea;
+            background: #eef2ff;
+        }
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #000;
+            flex-shrink: 0;
+        }
+        canvas {
+            border: 4px solid #dee2e6;
+            border-radius: 10px;
+            cursor: crosshair;
+            max-width: 100%;
+            background: white;
+            display: block;
+        }
+        .data-table {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #e5e7eb;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background: #f9fafb;
+        }
+        .coord-preview {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> -- Plot Digitizer Tool --</h1>
+            <p>Upload image → Set axis values → Calibrate 4 points → Click to extract data</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Upload -->
+                <div class="section">
+                    <h3>1. Upload Image</h3>
+                    <label for="fileInput" class="btn btn-success">
+                         Choose Image File
+                    </label>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <!-- Axis Settings -->
+                <div class="section" id="axisSection" style="display: none;">
+                    <h3>2. Set Axis Ranges</h3>
+                    <div class="input-grid">
+                        <div>
+                            <div class="input-label">X Min</div>
+                            <input type="number" id="xMin" value="0">
+                        </div>
+                        <div>
+                            <div class="input-label">X Max</div>
+                            <input type="number" id="xMax" value="200">
+                        </div>
+                        <div>
+                            <div class="input-label">Y Min</div>
+                            <input type="number" id="yMin" value="0">
+                        </div>
+                        <div>
+                            <div class="input-label">Y Max</div>
+                            <input type="number" id="yMax" value="60">
+                        </div>
+                    </div>
+                    <div class="instruction-box" id="instructions">
+                        Set axis values above
+                    </div>
+                    <button class="btn btn-danger" onclick="resetAll()"> Reset All</button>
+                </div>
+
+                <!-- Curves -->
+                <div class="section" id="curveSection" style="display: none;">
+                    <h3>3. Manage Curves</h3>
+                    <div id="curvesList"></div>
+                    <button class="btn btn-purple" onclick="addCurve()"> Add New Curve</button>
+                    <button class="btn btn-warning" onclick="removeLastPoint()"> Undo Last Point</button>
+                    <button class="btn btn-info" onclick="exportCSV()"> Export CSV</button>
+                </div>
+
+                <!-- Data Preview -->
+                <div class="section" id="dataSection" style="display: none;">
+                    <h3> Extracted Data</h3>
+                    <div id="dataPreview" class="data-table"></div>
+                </div>
+            </div>
+
+            <!-- Canvas Area -->
+            <div class="canvas-area">
+                <canvas id="canvas"></canvas>
+                <div id="coordPreview" class="coord-preview" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let img = null;
+        let axisPoints = [];
+        let curves = [{ id: 1, name: 'Curve 1', color: '#ff0000', points: [] }];
+        let activeCurve = 0;
+        let mode = 'axis';
+        let mousePos = null;
+
+        const colors = ['#ff0000', '#0000ff', '#00ff00', '#ff00ff', '#ff8800', '#00ffff', '#ff0080', '#80ff00'];
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    img = new Image();
+                    img.onload = function() {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        document.getElementById('axisSection').style.display = 'block';
+                        redrawCanvas();
+                        updateInstructions();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        canvas.addEventListener('click', function(e) {
+            if (!img) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            if (mode === 'axis') {
+                if (axisPoints.length < 4) {
+                    axisPoints.push({ x, y });
+                    if (axisPoints.length === 4) {
+                        mode = 'digitize';
+                        document.getElementById('curveSection').style.display = 'block';
+                        document.getElementById('dataSection').style.display = 'block';
+                    }
+                    updateInstructions();
+                    redrawCanvas();
+                }
+            } else if (mode === 'digitize') {
+                const real = pixelToReal(x, y);
+                curves[activeCurve].points.push({ px: x, py: y, x: real.x, y: real.y });
+                redrawCanvas();
+                updateDataPreview();
+            }
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (!img) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            mousePos = { x, y };
+
+            if (mode === 'digitize' && axisPoints.length === 4) {
+                const real = pixelToReal(x, y);
+                const preview = document.getElementById('coordPreview');
+                preview.style.display = 'block';
+                preview.textContent = `X: ${real.x.toFixed(3)}  Y: ${real.y.toFixed(3)}`;
+            }
+
+            redrawCanvas();
+        });
+
+        canvas.addEventListener('mouseleave', function() {
+            mousePos = null;
+            document.getElementById('coordPreview').style.display = 'none';
+            redrawCanvas();
+        });
+
+        function pixelToReal(px, py) {
+            if (axisPoints.length !== 4) return { x: 0, y: 0 };
+
+            const xMin = parseFloat(document.getElementById('xMin').value);
+            const xMax = parseFloat(document.getElementById('xMax').value);
+            const yMin = parseFloat(document.getElementById('yMin').value);
+            const yMax = parseFloat(document.getElementById('yMax').value);
+
+            const xMinPx = axisPoints[0].x;
+            const xMaxPx = axisPoints[1].x;
+            const yMinPx = axisPoints[2].y;
+            const yMaxPx = axisPoints[3].y;
+
+            const x = xMin + (px - xMinPx) * (xMax - xMin) / (xMaxPx - xMinPx);
+            const y = yMin + (yMinPx - py) * (yMax - yMin) / (yMinPx - yMaxPx);
+
+            return { x, y };
+        }
+
+        function redrawCanvas() {
+            if (!img) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            // Draw axis points
+            const labels = ['X-min', 'X-max', 'Y-min', 'Y-max'];
+            axisPoints.forEach((pt, i) => {
+                ctx.fillStyle = '#00ff00';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 12, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.font = 'bold 16px Arial';
+                const text = labels[i];
+                const metrics = ctx.measureText(text);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.fillRect(pt.x + 18 - 3, pt.y - 15 - 14, metrics.width + 6, 20);
+                ctx.fillStyle = '#000';
+                ctx.fillText(text, pt.x + 18, pt.y - 15);
+            });
+
+            if (axisPoints.length >= 2) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.moveTo(axisPoints[0].x, axisPoints[0].y);
+                ctx.lineTo(axisPoints[1].x, axisPoints[1].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            if (axisPoints.length >= 4) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.moveTo(axisPoints[2].x, axisPoints[2].y);
+                ctx.lineTo(axisPoints[3].x, axisPoints[3].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw curve points
+            curves.forEach(curve => {
+                ctx.fillStyle = curve.color;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+
+                curve.points.forEach((pt, i) => {
+                    ctx.beginPath();
+                    ctx.arc(pt.px, pt.py, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.font = 'bold 13px Arial';
+                    const text = `${i + 1}`;
+                    const metrics = ctx.measureText(text);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.fillRect(pt.px + 14 - 2, pt.py - 10 - 12, metrics.width + 4, 16);
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(text, pt.px + 14, pt.py - 10);
+                    ctx.fillStyle = curve.color;
+
+                    if (i > 0) {
+                        ctx.strokeStyle = curve.color;
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(curve.points[i-1].px, curve.points[i-1].py);
+                        ctx.lineTo(pt.px, pt.py);
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            // Draw crosshair
+            if (mousePos && mode === 'digitize' && axisPoints.length === 4) {
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+
+                ctx.beginPath();
+                ctx.moveTo(mousePos.x, 0);
+                ctx.lineTo(mousePos.x, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, mousePos.y);
+                ctx.lineTo(canvas.width, mousePos.y);
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+            }
+        }
+
+        function updateInstructions() {
+            const inst = document.getElementById('instructions');
+            if (mode === 'axis') {
+                const steps = [
+                    '1/4: Click where X-axis = X Min (origin)',
+                    '2/4: Click where X-axis = X Max',
+                    '3/4: Click where Y-axis = Y Min (origin again)',
+                    '4/4: Click where Y-axis = Y Max'
+                ];
+                inst.innerHTML = '<strong>Calibration Mode</strong><br>' +
+                    (axisPoints.length < 4 ? steps[axisPoints.length] : '✓ Complete!');
+            } else {
+                inst.innerHTML = `<strong>✓ Digitizing Active</strong><br>Move mouse to see coordinates. Click to add points.<br>Active: ${curves[activeCurve].name}`;
+            }
+        }
+
+        function updateCurvesList() {
+            const list = document.getElementById('curvesList');
+            list.innerHTML = curves.map((curve, i) => `
+                <div class="curve-item ${i === activeCurve ? 'active' : ''}" onclick="activeCurve = ${i}; updateCurvesList(); updateInstructions();">
+                    <div class="color-indicator" style="background-color: ${curve.color}"></div>
+                    <div style="flex: 1;">
+                        <strong style="font-size: 13px;">${curve.name}</strong>
+                        <div style="font-size: 11px; color: #6b7280;">${curve.points.length} points</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            let html = '<table><thead><tr><th>Curve</th><th>Pt</th><th>X</th><th>Y</th></tr></thead><tbody>';
+
+            curves.forEach(curve => {
+                curve.points.forEach((pt, i) => {
+                    html += `<tr>
+                        <td>${curve.name}</td>
+                        <td>${i+1}</td>
+                        <td>${pt.x.toFixed(4)}</td>
+                        <td>${pt.y.toFixed(4)}</td>
+                    </tr>`;
+                });
+            });
+
+            html += '</tbody></table>';
+            preview.innerHTML = html;
+        }
+
+        function addCurve() {
+            const newId = Math.max(...curves.map(c => c.id)) + 1;
+            curves.push({
+                id: newId,
+                name: `Curve ${newId}`,
+                color: colors[(curves.length) % colors.length],
+                points: []
+            });
+            activeCurve = curves.length - 1;
+            updateCurvesList();
+            updateInstructions();
+        }
+
+        function removeLastPoint() {
+            if (curves[activeCurve].points.length > 0) {
+                curves[activeCurve].points.pop();
+                redrawCanvas();
+                updateDataPreview();
+            }
+        }
+
+        function resetAll() {
+            axisPoints = [];
+            mode = 'axis';
+            curves = [{ id: 1, name: 'Curve 1', color: '#ff0000', points: [] }];
+            activeCurve = 0;
+            document.getElementById('curveSection').style.display = 'none';
+            document.getElementById('dataSection').style.display = 'none';
+            redrawCanvas();
+            updateInstructions();
+            updateDataPreview();
+        }
+
+        function exportCSV() {
+            let csv = '';
+            curves.forEach(curve => {
+                if (curve.points.length > 0) {
+                    csv += `${curve.name}\nX,Y\n`;
+                    curve.points.forEach(pt => {
+                        csv += `${pt.x.toFixed(6)},${pt.y.toFixed(6)}\n`;
+                    });
+                    csv += '\n';
+                }
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'digitized_data.csv';
+            a.click();
+        }
+
+        updateCurvesList();
+    </script>
+</body>
+</html>
